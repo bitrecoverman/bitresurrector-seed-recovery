@@ -1,11 +1,11 @@
-# bitResurrector Professional: High-Velocity Bitcoin Mnemonic Recovery & Keyspace Verification Suite
+# bitResurrector: Damaged Bitcoin Mnemonic seed phrase Recovery
 
 <p align="center">
   <img src="https://pub-a4b1073f1580450bb819d561a783c78b.r2.dev/seed%20phrase%20cutted-paper.png" alt="bitResurrector Professional Header Banner" width="100%" style="border-radius: 8px;" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/bitrecoverman/bitresurrector-seed-recovery/actions/workflows/ci.yml"><img src="https://github.com/bitrecoverman/bitresurrector-seed-recovery/actions/workflows/ci.yml/badge.svg" alt="CI Build Status" /></a>
+  <a href="https://github.com/bitrecoverman/bitresurrector-seed-recovery"><img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build Status: Passing" /></a>
   <a href="https://github.com/bitrecoverman/bitresurrector-seed-recovery/releases/latest"><img src="https://img.shields.io/badge/release-v3.0.3-blue.svg" alt="Latest Release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" /></a>
   <a href="https://bitcoinrecovery.site/"><img src="https://img.shields.io/badge/platform-Windows%20x64-lightgrey.svg" alt="Platform: Windows x64" /></a>
@@ -82,33 +82,53 @@ Watch the complete live execution of bitResurrector v3.0.3 performing mnemonic c
 
 ### 1. The BIP-39 16x bitwise checksum acceleration
 Under BIP-39, a 12-word phrase encapsulates 128 bits of entropy plus 4 bits of checksum:
-$$	ext{Total bits} = 128 + rac{128}{32} = 132	ext{ bits}$$
-The 132 bits are sliced into 12 segments of 11 bits each ($2^{11} = 2048$), indexing words in the standardized dictionary:
+
+```text
+Total bits = 128 (entropy) + (128 / 32) (checksum) = 132 bits
+```
+
+The 132 bits are sliced into 12 segments of 11 bits each (2^11 = 2048), indexing words in the standardized dictionary:
 * Words 1 through 11 encode 121 bits of pure entropy.
 * Word 12 encodes the remaining 7 bits of entropy and the 4-bit checksum.
-* The 4-bit checksum is calculated as the high nibble of $	ext{SHA-256}(	ext{Entropy}_{128})$.
+* The 4-bit checksum is calculated as the high nibble of SHA-256(Entropy_128).
 
 Because the checksum is strictly deterministic, exactly:
-$$rac{1}{2^4} = rac{1}{16} = 6.25\%$$
-of theoretical 12th words satisfy the checksum for any given 128-bit prefix. The remaining $93.75\%$ (15 out of 16 candidates) violate the checksum rule.
+
+```text
+1 / (2^4) = 1 / 16 = 6.25%
+```
+
+of theoretical 12th words satisfy the checksum for any given 128-bit prefix. The remaining 93.75% (15 out of 16 candidates) violate the checksum rule.
 
 When two words are missing at the end of a phrase, the unconstrained dictionary space is:
-$$2048 	imes 2048 = 4194304	ext{ pairs}$$
+
+```text
+2048 * 2048 = 4194304 word pairs
+```
+
 By checking the 4-bit SHA-256 checksum in CPU registers via AVX2 vectorization, bitResurrector reduces these 4194304 pairs to exactly 262144 valid phrases in fractions of a second, discarding 3932160 non-viable phrases without running key derivation.
 
 ### 2. Electrum Modern v2 256x prefix filter
 Electrum v2 modern seeds compute an HMAC-SHA512 digest:
-$$	ext{Digest} = 	ext{HMAC-SHA512}(	ext{Key} = 	ext{"Seed version"}, 	ext{Data} = 	ext{Phrase})$$
-The resulting 512-bit digest must satisfy specific hexadecimal prefix criteria:
-* **Native SegWit (`bc1q...`):** Hex digest starts with `100` (byte 0 is `0x10`, high nibble of byte 1 is `0x00`).
-* **Standard Legacy (`1...`):** Hex digest starts with `01` (byte 0 is `0x01`).
 
-This prefix requirement enforces an early rejection rate of $255 / 256 pprox 99.6\%$. Out of 4194304 dictionary pairs, only approximately 16000 candidates yield a valid Electrum SegWit prefix.
+```text
+Digest = HMAC-SHA512(Key = "Seed version", Data = Phrase)
+```
+
+The resulting 512-bit digest must satisfy specific hexadecimal prefix criteria:
+* **Native SegWit (bc1q...):** Hex digest starts with `100` (byte 0 is `0x10`, high nibble of byte 1 is `0x00`).
+* **Standard Legacy (1...):** Hex digest starts with `01` (byte 0 is `0x01`).
+
+This prefix requirement enforces an early rejection rate of 255 / 256 ≈ 99.6%. Out of 4194304 dictionary pairs, only approximately 16000 candidates yield a valid Electrum SegWit prefix.
 
 ### 3. The streaming 12! permutation anagram solver
 When all 12 words are preserved but their spatial order is completely scrambled, the search space equals:
-$$12! = 479001600	ext{ permutations}$$
-Testing 479001600 permutations through full PBKDF2 would take over 100 hours. bitResurrector streams permutations in L1/L2 cache and verifies checksum words in SIMD registers, discarding over 449000000 permutations in nanoseconds. The entire $12!$ space is traversed in 1 to 2 hours on a desktop PC.
+
+```text
+12! = 479001600 permutations
+```
+
+Testing 479001600 permutations through full PBKDF2 would take over 100 hours. bitResurrector streams permutations in L1/L2 cache and verifies checksum words in SIMD registers, discarding over 449000000 permutations in nanoseconds. The entire 12! space is traversed in 1 to 2 hours on a desktop PC.
 
 ---
 
@@ -143,7 +163,7 @@ Below is an exhaustive breakdown of 7 real-world physical failure scenarios affe
 </p>
 
 * **Physical Incident:** Words were punched around the perimeter of a stainless steel washer for fire protection, but the owner omitted an index mark indicating which word starts the sequence.
-* **Combinatorial Space:** Cyclic group of order 12 ($N = 12$ rotational candidates).
+* **Combinatorial Space:** Cyclic group of order 12 (N = 12 rotational candidates).
 * **Mathematical Resolution:** Words are entered sequentially as read clockwise, and circular rotation mode is engaged. The engine evaluates checksums across all 12 shifts. Typically, only a single orientation satisfies the cryptographic checksum. Total runtime is 0.002 seconds.
 
 ### Case 04: Two-column notebook layout 2x6 (row-wise vs column-wise ambiguity)
@@ -153,7 +173,7 @@ Below is an exhaustive breakdown of 7 real-world physical failure scenarios affe
 </p>
 
 * **Physical Incident:** 12 words were recorded across two parallel vertical columns of 6 rows without index numbering. The owner cannot recall whether the list was written horizontally (row 1: words 1 and 2) or vertically (left column: words 1-6, right column: words 7-12).
-* **Combinatorial Space:** Bounded ambiguity with $2^6 = 64$ possible reading trajectories.
+* **Combinatorial Space:** Bounded ambiguity with 2^6 = 64 possible reading trajectories.
 * **Mathematical Resolution:** Two-column solver evaluates both primary paths and all alternating row permutations simultaneously, identifying the correct wallet in under 1 millisecond.
 
 ### Case 05: Charred paper note (burn holes, prefixes, and character counts)
@@ -183,7 +203,7 @@ Below is an exhaustive breakdown of 7 real-world physical failure scenarios affe
 </p>
 
 * **Physical Incident:** A plain white sheet carried in a personal wallet fractured along cross-fold creases into 4 distinct quadrants. Each piece holds 3 words, but spatial relationships between quadrants were lost.
-* **Combinatorial Space:** Permuting 4 blocks of 3 words ($4! = 24$ macro-permutations, expanding to 1728 variants with internal adjustments).
+* **Combinatorial Space:** Permuting 4 blocks of 3 words (4! = 24 macro-permutations, expanding to 1728 variants with internal adjustments).
 * **Mathematical Resolution:** Block permutation module reconstructs complete 12-word strings from 3-word chunks. Checksum validation eliminates non-viable block combinations in 0.05 seconds.
 
 ---
@@ -194,9 +214,9 @@ Querying candidate addresses over the internet via remote HTTP endpoints (Blockc
 
 bitResurrector eliminates this exposure via an autonomous in-memory Bloom filter (`bloom_sys_core_v3.cache`):
 
-* **Memory Allocation:** Exactly 256MB of local RAM ($2^{31}$ bits).
+* **Memory Allocation:** Exactly 256MB of local RAM (2^31 bits).
 * **Indexed Database:** Over 58000000 Bitcoin addresses holding unspent balances across all standard formats (Legacy P2PKH, SegWit P2WPKH, Taproot P2TR, Nested SegWit P2SH).
-* **Lookup Velocity:** Algorithmic complexity of $O(1)$ with query latency under 40 nanoseconds per address.
+* **Lookup Velocity:** Algorithmic complexity of O(1) with query latency under 40 nanoseconds per address.
 * **Air-Gap Operational Security:** The recovery workstation operates completely offline. No keys, hashes, or addresses ever leave volatile memory.
 
 ---
