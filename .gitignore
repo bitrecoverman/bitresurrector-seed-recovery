@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Installer and binary builds (hosted exclusively on GitHub Releases)
+*.exe
+*.msi
+*.zip
+*.tar.gz
+dist/
+build/
+installer_output/
+
+# Environment and secrets
+.env
+.venv
+env/
+venv/
+*.bak
+.DS_Store
+Thumbs.db
